@@ -34,7 +34,7 @@ these files. It takes no part in the call and never sees anything from it.
    - everything (speech, chat, joins/leaves) is put in time order → Gemini writes the **summary**
      (topics, agreements, action items)
    - the .txt is **sent directly to everyone still in the call** (they download it), and
-   - **emailed** to every participant from the host's own Gmail (if set up, see below)
+   - **emailed** to every participant from testlinkas@gmail.com (if set up, see below)
    - the recorded audio is deleted.
 
 The only outside services: the public relays (they only see the encrypted handshake), Google Gemini (the
@@ -130,7 +130,7 @@ relays, so the PC needs internet.
   people you invite, and tell them the PIN separately.
 - The recorded speech goes only to the host's browser (and from there to Google Gemini for the transcript). It
   is deleted once the transcript is made.
-- The Gemini key stays in the host's browser. Emails are sent from the host's own Gmail with a permission
+- The Gemini key stays in the host's browser. Emails are sent from testlinkas@gmail.com with a permission
   that lasts one hour and is never stored.
 - With Gemini's free tier, Google may use the audio to improve its products. For confidential meetings use a
   paid Gemini key.

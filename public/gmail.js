@@ -1,7 +1,8 @@
-// Sends the after-meeting emails from the host's own Gmail (Google's Gmail API, called from this browser).
-// Google asks the host to allow "Send email on your behalf"; that permission lasts one hour and is kept
-// only in memory. Needs GOOGLE_CLIENT_ID in config.js (see README.md); without it nothing is emailed.
-import { GOOGLE_CLIENT_ID } from './config.js';
+// Sends the after-meeting emails from the Linkas Gmail (GMAIL_SENDER in config.js) with Google's Gmail API,
+// called from the host's browser. Google asks the host to sign in with it and allow "Send email on your behalf";
+// that permission lasts one hour and is kept only in memory. Needs GOOGLE_CLIENT_ID in config.js; without it
+// nothing is emailed.
+import { GOOGLE_CLIENT_ID, GMAIL_SENDER } from './config.js';
 
 const SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 export const configured = !!GOOGLE_CLIENT_ID;
@@ -27,6 +28,7 @@ export function authorize() {
       client_id: GOOGLE_CLIENT_ID,
       scope: SCOPE,
       prompt: '',
+      login_hint: GMAIL_SENDER,            // Google suggests this account
       callback: r => {
         const ok = !!r.access_token && oauth.hasGrantedAllScopes(r, SCOPE);
         if (ok) token = { value: r.access_token, until: Date.now() + (Number(r.expires_in) || 3600) * 1000 };
@@ -51,6 +53,7 @@ const word = text => `=?UTF-8?B?${base64(utf8.encode(text))}?=`;   // non-ASCII 
 function message({ to, subject, text, filename, content }) {
   const boundary = `linkas-${crypto.randomUUID()}`;
   return [
+    `From: "Linkas" <${GMAIL_SENDER}>`,
     `To: ${to}`,
     `Subject: ${word(subject)}`,
     'MIME-Version: 1.0',

@@ -4,9 +4,12 @@
 // A name only your copy of Linkas uses: browsers find each other's meetings under it.
 export const APP_ID = 'linkas-p2p-1';
 
-// Emails after the meeting are sent from the host's own Gmail (Google's Gmail API, straight from the browser).
-// Google requires an "OAuth client ID" made for the address where Linkas is published (free, steps in README.md).
-// Empty = no emails: everyone still in the call receives the transcript directly and can download it.
+// Emails after the meeting are sent from this Gmail account (Google's Gmail API, straight from the host's browser).
+// Google asks the host to sign in with it and allow sending, once.
+export const GMAIL_SENDER = 'testlinkas@gmail.com';
+
+// Google requires an "OAuth client ID" made for the address where Linkas is published (free, steps in HOW-TO-START.txt).
+// Empty = no emails: everyone receives the transcript in Linkas and can download it.
 export const GOOGLE_CLIENT_ID = '';
 
 // TURN servers pass the call on for people whose network blocks direct connections (some offices and mobile

@@ -10,7 +10,7 @@ PUBLISHING THE PAGE (GitHub Pages)
 The project is a GitHub repository (public: needed for free GitHub Pages; it holds no secrets, the
 Gemini key is never in it). Every push to "main" publishes the "public" folder automatically
 (.github/workflows/pages.yml), at:
-      https://YOUR-NAME.github.io/Linkas/
+      https://yankhee.github.io/Linkas/
 That is Linkas. Bookmark it. It stays the same.
 (Repository Settings -> Pages must say Source: "GitHub Actions".)
 
@@ -32,26 +32,29 @@ FIRST TIME ONLY: GEMINI KEY (for the transcript)
    It stays in your browser only. NEVER put it into a file you upload: everything uploaded is public.
 
 
-OPTIONAL: EMAILS FROM YOUR GMAIL (about 10 minutes)
----------------------------------------------------
-Without this, people get the summary on the screen when the meeting ends (and you can forward it).
-With this, everyone also gets it by email from your Gmail, as before.
+OPTIONAL: EMAILS FROM testlinkas@gmail.com (about 10 minutes)
+-------------------------------------------------------------
+Without this, people get the summary in Linkas when the meeting ends (and you can forward it).
+With this, everyone also gets it by email from testlinkas@gmail.com (shown as "Linkas").
+Do these steps signed in to Google as testlinkas@gmail.com.
+(The address is set in config.js: GMAIL_SENDER.)
 
 1. https://console.cloud.google.com -> project list (top left) -> "New project" -> name "Linkas" -> Create.
 2. Search bar: "Gmail API" -> Enable.
 3. Menu -> "Google Auth Platform" (or "APIs & Services -> OAuth consent screen") -> Get started:
-      App name: Linkas,   support email: your Gmail,   Audience: External,   contact: your Gmail -> Create.
-   Then "Audience" -> "Test users" -> Add users -> your own Gmail address -> Save.
+      App name: Linkas,   support email: testlinkas@gmail.com,   Audience: External,
+      contact: testlinkas@gmail.com -> Create.
+   Then "Audience" -> "Test users" -> Add users -> testlinkas@gmail.com -> Save.
 4. "Clients" -> "Create client":
       Application type: Web application
-      Authorized JavaScript origins:  https://YOUR-NAME.github.io      (only this part, no /Linkas/)
+      Authorized JavaScript origins:  https://yankhee.github.io        (only this part, no /Linkas/)
                                       http://localhost:3000             (only if you also test on this PC)
    -> Create -> copy the "Client ID" (ends with .apps.googleusercontent.com).
 5. In the repository open config.js, put it between the quotes:
       export const GOOGLE_CLIENT_ID = '1234...apps.googleusercontent.com';
    and commit.
 6. When you end your first meeting, Google opens a small window:
-   "Google hasn't verified this app" -> Continue (it is your own app) -> allow "Send email on your behalf".
+   choose testlinkas@gmail.com -> "Google hasn't verified this app" -> Continue (it is your own app) -> allow "Send email on your behalf".
    From then on the window just flashes and closes. If it is blocked, allow pop-ups for your Linkas address.
 
 
@@ -73,7 +76,7 @@ WHEN THE CALL IS OVER
 3. When it is done:
    - everyone can click "Download summary" - also people who left early: they wait on a
      "You left the meeting" screen, or get it in their Linkas lobby later
-   - everyone gets the email (if emails are set up), sent from your Gmail
+   - everyone gets the email (if emails are set up), sent from testlinkas@gmail.com
    - your lobby shows a "Last meeting" card with "Download summary" (kept in your browser)
 4. If something failed (Gemini limit, an email), the lobby card shows "Try again" / "Send again".
 5. Forgot to press "End meeting" and closed the tab? The next time you open Linkas, it ends and
