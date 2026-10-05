@@ -91,8 +91,8 @@ export async function sendMail(mail) {
     throw new Error('could not reach Gmail');
   }
   if (res.ok) return;
-  if (res.status === 401 || res.status === 403) { token = null; throw new Error('Gmail refused the permission (sign in again)'); }
   let reason = `HTTP ${res.status}`;
   try { reason = (await res.json()).error.message || reason; } catch { /* not JSON */ }
-  throw new Error(reason);
+  if (res.status === 401 || res.status === 403) token = null;   // ask Google again next time
+  throw new Error(res.status === 401 ? 'the Gmail sign-in expired' : reason.split('\n')[0].slice(0, 300));
 }

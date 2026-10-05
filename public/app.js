@@ -240,6 +240,10 @@ import { clock, cleanText, isEmail } from './util.js';
     renderHostCard(meta);
   }
 
+  // Why emails failed, in Google's own words (shown on the card and the end screen).
+  const mailProblem = meta => (Object.values(meta.mail).find(s => s.startsWith('failed')) || '')
+    .replace(/^failed:s*/, '').replace(/[.s]+$/, '');
+
   function renderHostCard(meta) {
     if (finishing) return;
     clearTimeout(lastTimer);
@@ -249,7 +253,7 @@ import { clock, cleanText, isEmail } from './util.js';
     const failed = mail.some(s => s.startsWith('failed'));
     ui.lastMeeting.classList.toggle('mail-failed', failed || meta.status === 'error');
     if (meta.status === 'done') {
-      setLastStatus(failed ? 'Some emails could not be sent — download the summary here.'
+      setLastStatus(failed ? `Email not sent: ${mailProblem(meta)}.`
         : sent ? `Ready. Emailed to ${sent} ${sent === 1 ? 'person' : 'people'}.` : 'Ready to download.', 'ready');
       if (gmail.configured && meeting.unsentMail(meta)) setLastAction(sent || failed ? 'Send again' : 'Email it', () => runAfterMeeting(meta, false));
     } else if (meta.status === 'error') {
@@ -1512,7 +1516,7 @@ import { clock, cleanText, isEmail } from './util.js';
     const mail = Object.values(meta.mail);
     const sent = mail.filter(s => s === 'sent').length;
     setEndStatus(!meta.hasContent ? 'Nobody said anything, so nothing was emailed.'
-      : mail.some(s => s.startsWith('failed')) ? 'Ready. Some emails could not be sent — send them again from the lobby.'
+      : mail.some(s => s.startsWith('failed')) ? `Ready, but email not sent: ${mailProblem(meta)}. Send it again from the lobby.`
         : sent ? `Ready. Emailed to ${sent} ${sent === 1 ? 'person' : 'people'}.`
           : gmail.configured ? 'Ready. Gmail was not allowed, so nothing was emailed — send it from the lobby.'
             : 'Ready. Everyone still here received it.', 'ready');
