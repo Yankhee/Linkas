@@ -24,6 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Every file reference gets this version's id, so browsers never mix an old cached file with a new one.
+      - name: Version the files
+        run: |
+          v=${GITHUB_SHA::8}
+          sed -i -E "s#(href|src)=\"(style\.css|app\.js)\"#\1=\"\2?v=$v\"#g" public/index.html
+          sed -i -E "s#from '\./([A-Za-z0-9_/.-]+\.m?js)'#from './\1?v=$v'#g" public/*.js
+          grep -c "?v=$v" public/index.html public/*.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
