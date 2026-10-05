@@ -19,22 +19,26 @@
     <div class="lobby-inner">
       <!-- Shown after you have been in a meeting: transcript progress and download -->
       <section id="lastMeeting" class="last-meeting" hidden>
-        <div class="last-icon">
-          <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+        <div class="last-head">
+          <div class="last-icon">
+            <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+          </div>
+          <div class="last-text">
+            <span id="lastWhen" class="last-label">Your last meeting</span>
+            <span id="lastName" class="last-name"></span>
+            <span id="lastStatus" class="last-status"></span>
+          </div>
+          <button id="lastDismiss" class="icon-btn" type="button" aria-label="Hide">
+            <svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
         </div>
-        <div class="last-text">
-          <span id="lastWhen" class="last-label">Your last meeting</span>
-          <span id="lastName" class="last-name"></span>
-          <span id="lastStatus" class="last-status"></span>
+        <div class="last-actions">
+          <button id="lastDownload" class="btn primary small" type="button" title="Download the summary and full conversation (.txt)" aria-label="Download summary">
+            <svg class="i" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
+            <span>Download summary</span>
+          </button>
+          <button id="lastAction" class="btn ghost small" type="button" hidden></button>
         </div>
-        <button id="lastDownload" class="btn primary small" type="button" title="Download the summary and full conversation (.txt)" aria-label="Download summary">
-          <svg class="i" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
-          <span>Download summary</span>
-        </button>
-        <button id="lastAction" class="btn ghost small" type="button" hidden></button>
-        <button id="lastDismiss" class="icon-btn" type="button" aria-label="Hide">
-          <svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
       </section>
       <div class="card">
         <div class="brand">
