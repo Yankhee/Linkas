@@ -1,0 +1,638 @@
+/* Linkas — dark theme: Discord greys & blacks with a mint-green accent */
+:root {
+  --bg-deep: #111214;
+  --bg-0: #1e1f22;
+  --bg-1: #2b2d31;
+  --bg-2: #313338;
+  --bg-3: #383a40;
+  --bg-4: #404249;
+  --text: #f2f3f5;
+  --text-2: #b5bac1;
+  --muted: #80848e;
+  --accent: #2fcf8a;          /* brand green */
+  --accent-2: #25b077;        /* hover / pressed */
+  --accent-soft: rgba(47, 207, 138, .25);
+  --accent-text: #6ee7b7;     /* green text & links on dark backgrounds */
+  --on-accent: #0c1a13;       /* text/icons on green (white is too weak on it) */
+  --red: #da373c;
+  --red-2: #a12d2f;
+  --radius: 12px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  font-family: Inter, "gg sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  background: var(--bg-0);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+.mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+
+svg.i {
+  width: 20px; height: 20px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ---------- Brand ---------- */
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: -.02em; }
+/* The icon's rounded tile is part of logo.svg; border-radius only shapes the glow. */
+.logo {
+  display: block; flex: none;
+  width: 40px; height: 40px; border-radius: 22%;   /* matches rx=14 of the 64px icon */
+  box-shadow: 0 4px 16px rgba(47, 207, 138, .3);
+}
+.brand.small { font-size: 17px; gap: 8px; }
+.brand.small .logo { width: 30px; height: 30px; box-shadow: none; }
+
+/* ---------- Lobby ---------- */
+.lobby {
+  height: 100%;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);   /* long text must never make the lobby wider than the screen */
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(47, 207, 138, .12), transparent 65%),
+    var(--bg-0);
+}
+.lobby-inner { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.card {
+  width: min(420px, 100%);
+  padding: 32px;
+  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, .04);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+.tagline { color: var(--text-2); margin: 8px 0 24px; }
+
+/* "Your last meeting" card above the lobby */
+.last-meeting {
+  width: min(420px, 100%);
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 10px 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid rgba(47, 207, 138, .25); border-radius: 14px;
+  animation: toast-in .25s ease-out;
+}
+.last-icon {
+  width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 10px; background: rgba(47, 207, 138, .15); color: var(--accent);
+}
+.last-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.last-label { font-size: 12px; color: var(--muted); }
+.last-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.last-status { margin-top: 2px; font-size: 12px; color: var(--text-2); }
+.btn.waiting { background: var(--bg-3); color: var(--text-2); opacity: 1; }
+.btn.waiting svg { animation: waiting 1.4s ease-in-out infinite; }
+@keyframes waiting { 50% { opacity: .3; } }
+.last-meeting .btn.small { width: auto; height: 36px; padding: 0 12px; font-size: 13px; flex: none; }
+.btn.small svg { width: 16px; height: 16px; }
+@media (max-width: 400px) { .last-meeting .btn.small span { display: none; } }
+.foot { color: var(--muted); font-size: 13px; text-align: center; max-width: 420px; line-height: 1.5; }
+
+.tabs {
+  display: grid; grid-template-columns: 1fr 1fr;
+  padding: 4px; margin-bottom: 20px;
+  background: var(--bg-0); border-radius: 10px;
+}
+.tab { padding: 9px; border-radius: 7px; color: var(--text-2); font-weight: 500; transition: background .15s, color .15s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--bg-3); color: var(--text); }
+
+.field { display: block; margin-bottom: 18px; }
+.label {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-2);
+}
+.input {
+  width: 100%; height: 44px; padding: 0 14px;
+  background: var(--bg-0);
+  border: 1px solid transparent; border-radius: 8px;
+  outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.input::placeholder { color: var(--muted); }
+.hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.pin { display: flex; gap: 12px; }
+.pin input {
+  width: 100%; min-width: 0; height: 64px;
+  text-align: center; font-size: 28px; font-weight: 600;
+  background: var(--bg-0);
+  border: 1px solid transparent; border-radius: 10px;
+  outline: none; caret-color: var(--accent);
+  transition: border-color .15s, box-shadow .15s;
+}
+.pin input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pin.shake { animation: shake .4s; }
+.pin.shake input { border-color: var(--red); }
+@keyframes shake {
+  0%, 100% { transform: none; }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 18px;
+  border-radius: 8px; font-weight: 600;
+  transition: background .15s, opacity .15s;
+}
+.btn.primary { width: 100%; background: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-2); }
+.btn.ghost { background: var(--bg-3); }
+.btn.ghost:hover { background: var(--bg-4); }
+.btn:disabled { opacity: .6; cursor: default; }
+.link { color: var(--accent-text); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+.error { margin-top: 12px; text-align: center; font-size: 14px; color: #fa777c; }
+.error:empty { display: none; }
+
+/* ---------- Call layout ---------- */
+.call {
+  height: 100%; height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);   /* long meeting names must never widen the page */
+  grid-template-rows: 56px minmax(0, 1fr) auto;
+  background: var(--bg-deep);
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 16px;
+  background: var(--bg-0);
+  border-bottom: 1px solid rgba(0, 0, 0, .3);
+}
+.room { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-2); }
+.room .lock { width: 16px; height: 16px; color: var(--accent); }
+.room-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.room-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 14px; font-weight: 600; }
+.room-code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.chip {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 10px;
+  border-radius: 8px; background: var(--bg-2);
+  color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.chip svg { width: 15px; height: 15px; }
+button.chip:hover { background: var(--bg-3); color: var(--text); }
+
+.stage { position: relative; display: flex; min-height: 0; }
+.main { position: relative; flex: 1; min-width: 0; display: flex; }
+
+/* Flex-wrap (not CSS grid) so an unfinished last row is centred, like Google Meet. */
+.grid {
+  --gap: 10px;
+  flex: 1; min-width: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+  gap: var(--gap); padding: 12px;
+}
+
+/* ---------- Video tiles ---------- */
+.tile {
+  flex: none;
+  width: calc((100% - (var(--cols, 1) - 1) * var(--gap)) / var(--cols, 1) - .5px);
+  height: calc((100% - (var(--rows, 1) - 1) * var(--gap)) / var(--rows, 1) - .5px);
+  position: relative; overflow: hidden; min-height: 0;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  animation: pop .25s ease-out;
+}
+@keyframes pop { from { opacity: 0; transform: scale(.97); } }
+.tile video { width: 100%; height: 100%; display: block; object-fit: cover; background: #000; }
+.tile.mirror video { transform: scaleX(-1); }
+.tile.screen video { object-fit: contain; }
+.tile.no-video video { visibility: hidden; }
+.tile::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0 var(--accent);
+  transition: box-shadow .15s;
+}
+.tile.speaking::after { box-shadow: inset 0 0 0 3px var(--accent); }
+
+.avatar { position: absolute; inset: 0; display: none; place-items: center; background: var(--bg-2); }
+.tile.no-video .avatar { display: grid; }
+.avatar span {
+  width: clamp(56px, 22%, 112px); aspect-ratio: 1;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-size: clamp(20px, 3vw, 40px); font-weight: 700; color: #fff;
+}
+.tile.speaking .avatar span { box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 7px var(--accent); }
+
+.tag {
+  position: absolute; left: 10px; bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 20px);
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .6); backdrop-filter: blur(6px);
+  font-size: 13px; font-weight: 500;
+}
+.tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag svg { display: none; width: 14px; height: 14px; color: var(--red); }
+.tile.muted .tag svg { display: block; }
+
+.status {
+  position: absolute; top: 10px; right: 10px;
+  display: none;
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(0, 0, 0, .6);
+  color: var(--text-2); font-size: 12px;
+}
+.tile.connecting .status { display: block; }
+
+/* ---------- Top-bar panel buttons (Chat, People) ---------- */
+.chip.active { background: var(--accent); color: var(--on-accent); }
+.chip.active:hover { background: var(--accent-2); color: var(--on-accent); }
+.chip.has-unread::after {
+  content: ""; position: absolute; top: -3px; right: -3px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--red); border: 2px solid var(--bg-0);
+}
+
+/* "Recording" indicator: red = your voice is recorded, grey = your mic is off, amber = not possible */
+.chip.rec { cursor: default; }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.chip.rec[data-status="live"] .rec-dot { background: var(--red); animation: rec-pulse 2s ease-in-out infinite; }
+.chip.rec[data-status="off"] .rec-dot { background: #f0b232; }
+@keyframes rec-pulse { 50% { box-shadow: 0 0 0 4px rgba(218, 55, 60, .25); } }
+
+/* ---------- People view ---------- */
+.people-list { flex: 1; min-height: 0; list-style: none; overflow-y: auto; padding: 8px; }
+.person {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 8px; border-radius: 8px;
+}
+.person:hover { background: var(--bg-2); }
+.person-avatar {
+  width: 32px; height: 32px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-size: 13px; font-weight: 700; color: #fff;
+}
+.person-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.person-status { display: flex; align-items: center; gap: 6px; flex: none; }
+.person-status span:not(.badge) { display: grid; }
+.person-status svg { width: 16px; height: 16px; }
+.person-status .cam-off { color: var(--muted); }
+.person-status .mic-off { color: var(--red); }
+.badge {
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(47, 207, 138, .15); color: var(--accent-text);
+  font-size: 11px; font-weight: 600;
+}
+.head-count {
+  display: inline-block; min-width: 22px; margin-left: 6px; padding: 1px 7px;
+  border-radius: 999px; background: var(--bg-3);
+  font-size: 12px; text-align: center; vertical-align: 1px;
+}
+
+/* ---------- Chat view ---------- */
+.chat-form {
+  display: flex; align-items: flex-end; gap: 8px;
+  margin: 12px; padding: 6px 6px 6px 12px;
+  border-radius: 10px; background: var(--bg-3);
+}
+.chat-form:focus-within { box-shadow: 0 0 0 2px var(--accent-soft); }
+.chat-input {
+  flex: 1; min-width: 0; max-height: 120px;
+  padding: 7px 0; border: 0; outline: none; resize: none;
+  background: transparent; line-height: 1.4;
+}
+.chat-input::placeholder { color: var(--muted); }
+.icon-btn.send { flex: none; color: var(--accent); }
+.icon-btn.send:disabled { color: var(--muted); background: none; cursor: default; }
+.icon-btn.send svg { width: 18px; height: 18px; }
+
+/* ---------- "You're alone" invite card ---------- */
+.alone {
+  position: absolute; top: 24px; left: 50%; z-index: 4;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(30, 31, 34, .92); backdrop-filter: blur(10px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
+  text-align: center;
+  animation: toast-in .25s ease-out;
+}
+.alone-title { font-weight: 600; }
+.alone-sub { margin: 4px 0 12px; font-size: 13px; color: var(--text-2); }
+.alone .btn { width: 100%; height: 38px; font-size: 14px; }
+.alone .btn svg { width: 16px; height: 16px; }
+
+/* ---------- "Sound blocked" button ---------- */
+.sound-blocked {
+  position: absolute; top: 50%; left: 50%; z-index: 6;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font-weight: 600;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+  animation: pop .25s ease-out;
+}
+.sound-blocked:hover { background: var(--accent-2); }
+
+/* ---------- "The meeting has ended" screen (transcript being made, then download) ---------- */
+.ended {
+  position: fixed; inset: 0; z-index: 20;
+  display: grid; place-items: center;
+  padding: 16px;
+  background: rgba(17, 18, 20, .82); backdrop-filter: blur(8px);
+}
+.ended-card {
+  width: min(380px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 28px 24px 22px;
+  background: var(--bg-2);
+  border: 1px solid rgba(47, 207, 138, .25); border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  text-align: center;
+  animation: pop .25s ease-out;
+}
+.ended-title { font-size: 18px; font-weight: 700; }
+.ended-status { min-height: 2.8em; font-size: 14px; line-height: 1.4; color: var(--text-2); overflow-wrap: anywhere; }
+.ended-card .btn { width: 100%; }
+.ended-card .fx-note { margin-top: 0; }
+.ended-card .fx-note:empty { display: none; }
+
+/* ---------- Side panel (People / Chat) ---------- */
+.panel {
+  width: 340px; flex: none; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg-1);
+  border-left: 1px solid rgba(0, 0, 0, .3);
+  animation: slide-in .18s ease-out;
+}
+@keyframes slide-in { from { opacity: 0; transform: translateX(16px); } }
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid var(--bg-3);
+}
+.panel-head h2 { font-size: 15px; font-weight: 600; }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-2); }
+.icon-btn:hover { background: var(--bg-3); color: var(--text); }
+
+/* Chat message list */
+.messages {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 14px 16px;
+  list-style: none;
+}
+.messages:empty::before {
+  margin: auto 16px;
+  text-align: center; font-size: 14px; line-height: 1.5; color: var(--muted);
+}
+.chat:empty::before { content: "No messages yet. Messages are visible to everyone in the call."; }
+.messages .meta { display: flex; align-items: baseline; gap: 8px; }
+.messages b { font-weight: 600; font-size: 14px; }
+.messages time { font-size: 11px; color: var(--muted); }
+.messages p { margin-top: 2px; line-height: 1.45; color: var(--text-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat p { color: var(--text); }
+.chat a { color: var(--accent-text); text-decoration: none; }
+.chat a:hover { text-decoration: underline; }
+.panel-foot { padding: 12px 16px; border-top: 1px solid var(--bg-3); }
+.panel-foot .btn { width: 100%; }
+.optional { margin-left: auto; margin-right: 0; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
+
+.messages::-webkit-scrollbar, .people-list::-webkit-scrollbar { width: 8px; }
+.messages::-webkit-scrollbar-thumb, .people-list::-webkit-scrollbar-thumb { background: var(--bg-0); border-radius: 8px; }
+
+/* ---------- Controls ---------- */
+.controls {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg-0);
+}
+.ctrl {
+  position: relative;
+  width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--bg-3); color: var(--text);
+  transition: background .15s, transform .1s;
+}
+.ctrl:hover { background: var(--bg-4); }
+.ctrl:active { transform: scale(.94); }
+.ctrl.on { background: var(--accent); color: var(--on-accent); }
+.ctrl.on:hover { background: var(--accent-2); }
+.ctrl.off { background: var(--red); }
+.ctrl.off:hover { background: var(--red-2); }
+.ctrl:focus-visible, .btn:focus-visible, .chip:focus-visible, .tab:focus-visible, .icon-btn:focus-visible, .link:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.ctrl .slash { display: none; }
+.ctrl.off .slash { display: inline; }
+.ctrl.leave { width: 64px; border-radius: 24px; background: var(--red); }
+.ctrl.leave:hover { background: var(--red-2); }
+.ctrl.leave svg { transform: rotate(135deg); }
+.sep { width: 1px; height: 28px; margin: 0 4px; background: var(--bg-3); }
+
+/* ---------- Background effects menu ---------- */
+.fx-wrap { position: relative; display: grid; }
+.fx-menu {
+  position: absolute; bottom: calc(100% + 12px); left: 50%; z-index: 30;
+  transform: translateX(-50%);
+  width: 272px; padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid rgba(255, 255, 255, .06); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+  animation: fx-in .15s ease-out;
+}
+@keyframes fx-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+.fx-title {
+  margin-bottom: 10px;
+  font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-2);
+}
+.fx-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fx-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 5px 5px 7px;
+  border: 2px solid transparent; border-radius: 10px;
+  color: var(--text-2); font-size: 12px; font-weight: 500;
+  transition: background .15s, border-color .15s;
+}
+.fx-opt:hover { background: var(--bg-2); color: var(--text); }
+.fx-opt.selected { border-color: var(--accent); background: rgba(47, 207, 138, .08); color: var(--text); }
+.fx-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Little preview: a room (blurred by level) with a sharp person in front */
+.fx-thumb { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 7px; }
+.fx-scene {
+  position: absolute; inset: -6px;
+  background:
+    radial-gradient(circle at 80% 32%, #f0b232 0 9%, transparent 10%),
+    linear-gradient(90deg, transparent 0 10%, #3ba5e0 10% 36%, transparent 36%) 0 18% / 100% 40% no-repeat,
+    linear-gradient(180deg, #5d6370 0 70%, #43464e 70%);
+}
+.fx-thumb.light .fx-scene { filter: blur(1.5px); }
+.fx-thumb.strong .fx-scene { filter: blur(3.5px); }
+.fx-person {
+  position: absolute; left: 50%; bottom: 0;
+  width: 50%; height: 80%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(circle at 50% 30%, #e8c7a4 0 21%, transparent 22%),
+    radial-gradient(ellipse 50% 42% at 50% 100%, #1e1f22 0 99%, transparent 100%);
+}
+.fx-note { margin-top: 10px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+
+/* Microphone picker: small arrow on the corner of the mic button */
+.caret {
+  position: absolute; top: -7px; right: -7px; z-index: 1;
+  width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--bg-4); border: 2px solid var(--bg-0); color: var(--text-2);
+}
+.caret:hover { color: var(--text); background: var(--bg-3); }
+.caret svg { width: 12px; height: 12px; stroke-width: 3; }
+.mic-list { display: grid; gap: 2px; max-height: 240px; overflow-y: auto; }
+.mic-opt {
+  padding: 9px 10px; border-radius: 8px;
+  font-size: 13px; text-align: left; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mic-opt:hover { background: var(--bg-3); color: var(--text); }
+.mic-opt.selected { background: var(--bg-3); color: var(--accent-text); font-weight: 600; }
+.mic-empty { padding: 4px 2px; font-size: 13px; color: var(--muted); }
+
+/* Host only: leave, or end the meeting for everyone */
+.leave-menu { display: grid; gap: 8px; left: auto; right: 0; transform: none; }
+.leave-menu[hidden] { display: none; }
+.leave-menu .fx-note { margin-top: 2px; }
+.btn.danger { background: var(--red); color: #fff; }
+.btn.danger:hover { background: var(--red-2); }
+.last-meeting.mail-failed .last-status { color: #f0b232; }
+
+/* ---------- Mini window (picture-in-picture, like Google Meet) ----------
+   These rules are copied into the separate always-on-top window. */
+.pip-body { height: 100vh; overflow: hidden; background: var(--bg-deep); }
+.pip { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+.pip-stage {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  border-radius: 14px;
+  background: var(--tint, var(--bg-2));
+  transition: background .3s;
+}
+.pip-stage video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.pip-stage.mirror video { transform: scaleX(-1); }
+.pip-stage.screen video { object-fit: contain; background: #000; }
+.pip-stage.no-video video { visibility: hidden; }
+.pip-stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit; box-shadow: inset 0 0 0 0 var(--accent); transition: box-shadow .15s;
+}
+.pip-stage.speaking::after { box-shadow: inset 0 0 0 3px var(--accent); }
+.pip-avatar { position: absolute; inset: 0; display: none; place-items: center; }
+.pip-stage.no-video .pip-avatar { display: grid; }
+.pip-avatar span {
+  width: 76px; height: 76px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 28px; font-weight: 700; color: #fff;
+}
+.pip-stage.speaking .pip-avatar span { box-shadow: 0 0 0 4px var(--tint, var(--bg-2)), 0 0 0 7px var(--accent); }
+.pip-muted {
+  position: absolute; top: 10px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: none; place-items: center;
+  background: rgba(0, 0, 0, .45); color: var(--red);
+}
+.pip-muted svg { width: 15px; height: 15px; }
+.pip-stage.muted .pip-muted { display: grid; }
+.pip-name {
+  position: absolute; left: 12px; bottom: 10px; max-width: calc(100% - 24px);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; font-weight: 600; text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+}
+.pip-count {
+  position: absolute; top: 10px; left: 10px;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(0, 0, 0, .45); color: var(--text-2); font-size: 12px; font-weight: 600;
+}
+.pip-controls { display: flex; justify-content: center; gap: 10px; flex: none; }
+.pip-controls .ctrl { width: 56px; height: 44px; border-radius: 14px; }
+.pip-controls .ctrl.leave { width: 60px; }
+
+/* ---------- Toasts ---------- */
+.toasts {
+  position: fixed; top: 16px; left: 50%; z-index: 50;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 32px);
+  pointer-events: none;
+}
+.toast {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  font-size: 14px;
+  animation: toast-in .2s ease-out;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }
+.call:not([hidden]) ~ .toasts { top: 68px; }   /* in a call, keep toasts clear of the top bar */
+
+/* ---------- Small screens ---------- */
+@media (max-width: 760px) {
+  .card { padding: 24px 20px; }
+  .pin input { height: 56px; }
+  .topbar { padding: 0 12px; }
+  .brand-name, .hide-sm { display: none; }
+  .panel { position: absolute; inset: 0; width: auto; z-index: 10; border-left: 0; }
+  .grid { padding: 8px; --gap: 8px; }
+  .controls { gap: 8px; padding-top: 12px; }
+  .ctrl { width: 44px; height: 44px; }
+  .ctrl.leave { width: 56px; }
+  .sep { display: none; }
+  /* effects menu: full width above the control bar instead of centred on its button */
+  .fx-menu { position: fixed; left: 8px; right: 8px; bottom: 76px; width: auto; transform: none; animation: none; }
+  .input { font-size: 16px; }   /* stops iPhone from zooming in on focus */
+}
+
+/* Very narrow phones (iPhone SE, small Androids) */
+@media (max-width: 400px) {
+  .card { padding: 20px 16px; }
+  .pin { gap: 8px; }
+  .topbar { gap: 8px; padding: 0 8px; }
+  .top-right { gap: 6px; }
+  #timer { display: none; }   /* the meeting name matters more on tiny screens */
+  .chip { padding: 0 8px; }
+  .controls { gap: 6px; padding-left: 8px; padding-right: 8px; }
+  .ctrl { width: 40px; height: 40px; }
+  .ctrl.leave { width: 48px; }
+}
+
+/* Mid-size screens: slimmer side panel so video keeps room */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .panel { width: 300px; }
+}
+
+/* Short screens (phones in landscape) */
+@media (max-height: 500px) {
+  .call { grid-template-rows: 44px minmax(0, 1fr) auto; }
+  .controls { padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .ctrl { width: 40px; height: 40px; }
+  .grid { padding: 6px; --gap: 6px; }
+  .lobby { place-items: start center; }
+}

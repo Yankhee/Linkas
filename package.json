@@ -1,0 +1,14 @@
+{
+  "name": "linkas",
+  "version": "2.0.0",
+  "description": "Linkas - private peer-to-peer video calls; the transcript and summary go to everyone after the call",
+  "private": true,
+  "scripts": {
+    "start": "node serve.js",
+    "vendor": "esbuild node_modules/trystero/dist/index.mjs --bundle --format=esm --minify --target=es2022 --legal-comments=eof --outfile=public/vendor/trystero.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "trystero": "0.26.0"
+  }
+}

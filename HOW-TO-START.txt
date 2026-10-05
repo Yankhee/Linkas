@@ -1,0 +1,105 @@
+LINKAS - HOW TO PUT IT ONLINE AND START A CALL
+==============================================
+
+Linkas has no server. Your PC does not host anything and can be switched off.
+The page is published once on a free static host (GitHub Pages); after that you only open its address.
+
+
+PUBLISHING THE PAGE (GitHub Pages)
+----------------------------------
+The project is a GitHub repository (public: needed for free GitHub Pages; it holds no secrets, the
+Gemini key is never in it). Every push to "main" publishes the "public" folder automatically
+(.github/workflows/pages.yml), at:
+      https://YOUR-NAME.github.io/Linkas/
+That is Linkas. Bookmark it. It stays the same.
+(Repository Settings -> Pages must say Source: "GitHub Actions".)
+
+Changing something later (e.g. config.js): edit the file, then
+      git add -A
+      git commit -m "what changed"
+      git push
+or edit it on github.com (pencil icon -> "Commit changes"). The page updates within a minute or two.
+Files that must never be uploaded (.env, recordings, transcripts) are listed in .gitignore.
+
+(Even simpler alternative: https://app.netlify.com/drop - drag the "public" folder onto the page and
+make a free account so the site stays. To update, drag the folder again on the site's "Deploys" tab.)
+
+
+FIRST TIME ONLY: GEMINI KEY (for the transcript)
+-----------------------------------------------
+1. https://aistudio.google.com/apikey -> "Create API key" -> copy it.
+2. When you create your first meeting, paste it into "Gemini API key". Your browser remembers it.
+   It stays in your browser only. NEVER put it into a file you upload: everything uploaded is public.
+
+
+OPTIONAL: EMAILS FROM YOUR GMAIL (about 10 minutes)
+---------------------------------------------------
+Without this, people get the summary on the screen when the meeting ends (and you can forward it).
+With this, everyone also gets it by email from your Gmail, as before.
+
+1. https://console.cloud.google.com -> project list (top left) -> "New project" -> name "Linkas" -> Create.
+2. Search bar: "Gmail API" -> Enable.
+3. Menu -> "Google Auth Platform" (or "APIs & Services -> OAuth consent screen") -> Get started:
+      App name: Linkas,   support email: your Gmail,   Audience: External,   contact: your Gmail -> Create.
+   Then "Audience" -> "Test users" -> Add users -> your own Gmail address -> Save.
+4. "Clients" -> "Create client":
+      Application type: Web application
+      Authorized JavaScript origins:  https://YOUR-NAME.github.io      (only this part, no /Linkas/)
+                                      http://localhost:3000             (only if you also test on this PC)
+   -> Create -> copy the "Client ID" (ends with .apps.googleusercontent.com).
+5. In the repository open config.js, put it between the quotes:
+      export const GOOGLE_CLIENT_ID = '1234...apps.googleusercontent.com';
+   and commit.
+6. When you end your first meeting, Google opens a small window:
+   "Google hasn't verified this app" -> Continue (it is your own app) -> allow "Send email on your behalf".
+   From then on the window just flashes and closes. If it is blocked, allow pop-ups for your Linkas address.
+
+
+EVERY TIME YOU WANT A CALL
+--------------------------
+1. Open your Linkas address in Chrome or Edge.
+2. Enter your name, your email, a meeting name, a 4-digit PIN (or "Generate").
+   The Gemini key is already filled in. Click "Create meeting".
+3. Click "Copy link" (top of the screen) and send the link to your client.
+   Tell them the PIN separately (another message or by phone).
+4. Your client opens the link, types their name, email and the PIN.
+
+
+WHEN THE CALL IS OVER
+---------------------
+1. Click the red Leave button -> "End meeting for everyone".
+2. YOUR BROWSER now makes the transcript (Gemini). This takes a minute or two.
+   KEEP THE TAB OPEN until it says "Ready". Everyone sees the progress on their screen.
+3. When it is done:
+   - everyone still in the call can click "Download summary"
+   - everyone gets the email (if emails are set up), sent from your Gmail
+   - your lobby shows a "Last meeting" card with "Download summary" (kept in your browser)
+4. If something failed (Gemini limit, an email), the lobby card shows "Try again" / "Send again".
+
+
+TRYING IT ON THIS PC (optional)
+-------------------------------
+   cd "path\to\Linkas"
+   npm start
+Open http://localhost:3000 in a normal window and in a private window (Ctrl+Shift+N) to play both sides.
+
+
+GOOD TO KNOW
+------------
+- Use the same browser on the same PC as host: the meeting record lives in that browser.
+- A person is only recorded while their microphone is ON (red "Recording" dot in the top bar).
+- Wearing a headset? Click the small arrow on the microphone button and choose the headset microphone.
+- Headphones and a good microphone give by far the best transcript.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+- "Could not reach the meeting"   -> check the code and PIN; the host must already be in the call.
+- "Wrong PIN"                     -> ask the host for the PIN again.
+- Client stuck on "Connecting..." -> their network blocks direct calls (rare: strict company networks).
+                                     Try another network (e.g. phone hotspot), or add a TURN server in
+                                     config.js (see README.md).
+- No sound                        -> if a "Click to turn on sound" button appears, click it.
+                                     Also check the tab is not muted (right-click the tab -> "Unmute site").
+- I closed the tab by accident    -> open the link again and join with the same code and PIN: you carry on
+                                     as the host, nothing is lost.

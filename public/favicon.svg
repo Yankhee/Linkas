@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Linkas "Duo": two people side by side, the right one in front -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect width="64" height="64" fill="#fff"/>
+      <circle cx="39" cy="32" r="15.5" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#2fcf8a"/>
+  <circle cx="25" cy="32" r="13" fill="#111214" mask="url(#gap)"/>
+  <circle cx="39" cy="32" r="13" fill="#111214"/>
+</svg>

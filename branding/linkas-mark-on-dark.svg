@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 44 44">
+  <!-- Linkas mark, green on transparent (for dark backgrounds) -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect width="64" height="64" fill="#fff"/>
+      <circle cx="39" cy="32" r="15.5" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="25" cy="32" r="13" fill="#2fcf8a" mask="url(#gap)"/>
+  <circle cx="39" cy="32" r="13" fill="#2fcf8a"/>
+</svg>

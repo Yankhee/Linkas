@@ -1,0 +1,98 @@
+LINKAS · ARCHITEKTŪRA
+=====================
+
+Vaizdo susitikimai su automatine stenograma ir santrauka lietuvių kalba.
+
+
+1. BENDRAS VAIZDAS
+------------------
+
+   Dalyvis A                                              Dalyvis B
+  (naršyklė)  <========= vaizdas ir garsas =========>    (naršyklė)
+       |                  (šifruotas)                         |
+       |                                                      |
+       +---------------------- HTTPS -------------------------+
+                                 |
+                                 v
+      +-----------------------------------------------------+
+      |                  LINKAS SERVERIS (ES)               |
+      |                                                     |
+      |   Svetainė          Susitikimų          Ryšio       |
+      |   ir paskyros       valdymas            serveris    |
+      |                                                     |
+      |   Duomenų bazė      Failų saugykla      Užduočių    |
+      |                                         eilė        |
+      +-----------------------------------------------------+
+                 |                              |
+                 v                              v
+        Dirbtinis intelektas             Laiškų siuntimas
+        (kalba -> tekstas,               (santrauka dalyviams)
+         santrauka)
+
+
+2. DALYS
+--------
+
+  Naršyklė              Susitikimo langas: vaizdas, garsas, ekrano dalijimas,
+                        pokalbiai. Nieko diegti nereikia.
+
+  Svetainė ir paskyros  Prisijungimas, susitikimų kūrimas, susitikimų istorija.
+
+  Susitikimų valdymas   Kambariai, PIN kodai, dalyvių sąrašas, pokalbių žinutės.
+
+  Ryšio serveris        Užtikrina ryšį tarp dalyvių bet kuriame tinkle.
+
+  Duomenų bazė          Paskyros, susitikimai, stenogramos, santraukos.
+
+  Failų saugykla        Laikini garso įrašai ir paruošti dokumentai.
+
+  Užduočių eilė         Stenogramų ir santraukų ruošimas po susitikimo.
+
+  Dirbtinis intelektas  Kalbą paverčia tekstu ir parašo santrauką.
+
+  Laiškų siuntimas      Išsiunčia santrauką ir stenogramą dalyviams.
+
+
+3. SUSITIKIMO EIGA
+------------------
+
+  1. Organizatorius sukuria susitikimą ir gauna nuorodą bei PIN kodą.
+  2. Dalyviai prisijungia per nuorodą: vardas, el. paštas, PIN kodas.
+  3. Susitikimo metu kiekvieno dalyvio kalba įrašoma atskirai.
+  4. Organizatorius baigia susitikimą.
+  5. Kalba paverčiama tekstu: kas, ką ir kada pasakė.
+  6. Parengiama santrauka: temos, sutarimai, veiksmų punktai.
+  7. Kiekvienas dalyvis gauna laišką su santrauka ir stenograma.
+  8. Organizatorius susitikimą randa savo istorijoje.
+
+
+4. DUOMENYS
+-----------
+
+  Vaizdas ir garsas     Perduodami šifruotai, nesaugomi.
+  Garso įrašai          Naudojami tik stenogramai, po to ištrinami.
+  Stenogramos           Saugomos duomenų bazėje ES, organizatorius gali ištrinti.
+  El. pašto adresai     Naudojami tik santraukai išsiųsti.
+
+
+5. SAUGUMAS
+-----------
+
+  - Visas ryšys šifruotas (HTTPS, WebRTC).
+  - Susitikimas apsaugotas nuoroda ir PIN kodu.
+  - Stenogramą mato tik susitikimo dalyviai.
+  - Serveriai ir duomenys Europos Sąjungoje.
+  - Dalyviai informuojami apie įrašymą prieš prisijungdami.
+  - Atsarginės duomenų kopijos kasdien.
+
+
+6. TECHNOLOGIJOS
+----------------
+
+  Naršyklė              WebRTC, JavaScript
+  Serveris              Node.js, Socket.IO
+  Ryšio serveris        TURN / SFU
+  Duomenų bazė          PostgreSQL
+  Failų saugykla        S3 tipo saugykla
+  Diegimas              Docker
+  Dirbtinis intelektas  Gemini (kalbos atpažinimas ir santrauka)

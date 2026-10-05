@@ -1,0 +1,21 @@
+# Secrets: never commit
+.env
+.env.*
+*.pem
+*.key
+
+# Meeting data and leftovers from the old server version (private conversations)
+recordings/
+transcripts/
+models-cache/
+
+# Installed libraries (npm install makes them)
+node_modules/
+
+# Editor / OS clutter
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
