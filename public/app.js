@@ -408,20 +408,19 @@ import { clock, cleanText, isEmail } from './util.js';
   let micId = store.get('mic') || null;
   const micLive = () => state.mic && !state.micSilent;   // on in the app AND not muted on the device itself
 
+  // The microphone is used as the browser gives it (its standard settings, nothing added or changed).
   async function openDevice(kind) {
-    // Echo cancellation + noise suppression give the other people a cleaner voice.
-    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
     if (kind === 'video') return navigator.mediaDevices.getUserMedia({ video: VIDEO });
     if (micId) {
       try {
-        return await navigator.mediaDevices.getUserMedia({ audio: { ...audio, deviceId: { exact: micId } } });
+        return await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: micId } } });
       } catch (err) {
         if (!['OverconstrainedError', 'NotFoundError'].includes(err.name)) throw err;
         micId = null;                             // the chosen microphone is unplugged: use the default one
         store.set('mic', '');
       }
     }
-    return navigator.mediaDevices.getUserMedia({ audio });
+    return navigator.mediaDevices.getUserMedia({ audio: true });
   }
 
   // Asks the browser for the microphone ('audio') or camera ('video') and adds it to our stream.
@@ -860,8 +859,7 @@ import { clock, cleanText, isEmail } from './util.js';
     if (micBusy) return;
     let track = state.local.getAudioTracks()[0];
     if (track) {
-      state.mic = track.enabled = !state.mic;   // mute = keep the mic open but send silence
-      if (rec.track) rec.track.enabled = state.mic;   // the recording copy of the mic is muted too
+      state.mic = track.enabled = !state.mic;   // mute = keep the mic open but send (and record) silence
     } else {
       micBusy = true;                            // first unmute: ask for the microphone
       track = await acquire('audio');
@@ -1634,7 +1632,6 @@ import { clock, cleanText, isEmail } from './util.js';
   // and sends each piece, with the moment you started speaking, straight to the host's browser. After the
   // meeting the host's browser turns everything into text (Gemini) and builds the .txt file.
 
-  const IS_SAFARI = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
   const REC_RATE = 16000;
   const FRAME = 480;                 // 30 ms at 16 kHz
   const FRAME_MS = 30;
@@ -1665,7 +1662,7 @@ import { clock, cleanText, isEmail } from './util.js';
 
   const rec = {
     supported: typeof AudioWorkletNode === 'function',
-    ctx: null, workletReady: false, source: null, node: null, sink: null, filters: [], track: null, ownTrack: false, failed: false,
+    ctx: null, workletReady: false, source: null, node: null, sink: null, filters: [], failed: false,
     step: 1, pos: 0, last: 0,                     // resampling to 16 kHz (only if the browser can't do it)
     frame: new Float32Array(FRAME), fi: 0,
     noise: 0.003, blockMin: Infinity, blockN: 0, mins: [],
@@ -1675,24 +1672,6 @@ import { clock, cleanText, isEmail } from './util.js';
     unsent: [],                                   // finished pieces the host's browser has not confirmed yet
     prefix: crypto.randomUUID().slice(0, 8), count: 0,   // every piece gets a unique id (no doubles after resending)
   };
-
-  // The recorder uses its own copy of the microphone WITHOUT automatic gain and noise suppression:
-  // tested, the gain control turned the first words up until they clipped, which made Whisper derail.
-  // Echo cancellation stays on, so other people's voices from your speakers are not recorded as yours.
-  async function recordingCopy(callTrack) {
-    if (IS_SAFARI) return null;   // Safari silences the call's microphone when it is opened a second time
-    const { deviceId } = callTrack.getSettings();
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: {
-        deviceId: deviceId ? { exact: deviceId } : undefined,
-        echoCancellation: true, noiseSuppression: false, autoGainControl: false, channelCount: 1,
-      } });
-      return s.getAudioTracks()[0];
-    } catch (err) {
-      console.warn('Separate recording mic not available, using the call mic', err);
-      return null;
-    }
-  }
 
   // The recording audio engine and its worklet are created once and reused.
   async function recorderContext() {
@@ -1711,12 +1690,10 @@ import { clock, cleanText, isEmail } from './util.js';
     return rec.ctx;
   }
 
-  async function startRecorder(callTrack) {
+  // Records from the same microphone the call uses (it is opened only once).
+  async function startRecorder(track) {
     if (!rec.supported || rec.source) return renderRecStatus();
     stopRecorder();
-    const copy = await recordingCopy(callTrack);
-    const track = copy || callTrack;
-    rec.ownTrack = !!copy;
     try {
       const ctx = await recorderContext();
       rec.source = ctx.createMediaStreamSource(new MediaStream([track]));
@@ -1735,8 +1712,6 @@ import { clock, cleanText, isEmail } from './util.js';
       });
       [rec.source, ...rec.filters, rec.node, rec.sink, ctx.destination].reduce((a, b) => a.connect(b));
       rec.node.port.onmessage = e => feed(e.data);
-      rec.track = track;
-      track.enabled = state.mic;                   // muted while the recorder was starting: stay muted
       rec.failed = false;
     } catch (err) {
       console.warn('Recorder failed to start', err);
@@ -1751,8 +1726,7 @@ import { clock, cleanText, isEmail } from './util.js';
     Object.assign(rec, { pre: [], preLevels: [], voiceRun: 0 });
     if (rec.node) rec.node.port.onmessage = null;
     [rec.source, ...rec.filters, rec.node, rec.sink].forEach(n => n?.disconnect());
-    if (rec.ownTrack) rec.track?.stop();
-    Object.assign(rec, { source: null, node: null, sink: null, filters: [], track: null, ownTrack: false });
+    Object.assign(rec, { source: null, node: null, sink: null, filters: [] });
   }
 
   // Microphone samples -> 30 ms frames at 16 kHz.
