@@ -100,14 +100,19 @@ relays, so the PC needs internet.
 ## What happens when…
 
 - **the host ends the meeting**: everyone sees *The meeting has ended*. A minute or two later the summary
-  arrives on that screen (*Download summary*) and by email. Guests can close the tab early if emails are set
-  up. **The host keeps the tab open until it says *Ready*** (the browser warns before closing it).
+  arrives on that screen (*Download summary*) and by email. **The host keeps the tab open until it says
+  *Ready*** (the browser warns before closing it).
 - **the host leaves**: the host's browser is where the meeting is recorded, so leaving = ending the meeting
   for everyone.
-- **the host's tab closes by accident**: open the same link again and join with the same code and PIN. That
-  browser carries on as the host with nothing lost, and the guests' speech recorded meanwhile is handed in. Or make
-  the transcript from the lobby card (*Make it now*).
-- **a guest leaves early**: their last sentence is handed in first; they get the summary by email.
+- **a guest leaves early**: their last sentence is handed in, and they see *You left the meeting — waiting
+  for the meeting to end*. When it ends, the summary appears on that screen. If they close the tab, the
+  *Last meeting* card in their Linkas lobby gets it from the host's browser whenever both are online (and it
+  is emailed, if set up).
+- **the host's tab closes without ending the meeting**: open the same link again and join with the same code
+  and PIN to carry on, with nothing lost. If the host does not come back, the next time they open Linkas (after 2
+  quiet minutes) the meeting is ended and transcribed by itself, and sent to everyone, including guests
+  still waiting in the call. Speech recorded while the host was away is included. The emails then need
+  one click on the lobby card (*Email it*), because Google asks for permission on a click.
 - **Gemini fails** (key wrong, free limit used up): the host sees why, and the lobby card has *Try again*. The
   recordings stay in the host's browser until a transcript is made.
 - **an email fails**: the lobby card says so and has *Send again*; *Download summary* always works.

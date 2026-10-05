@@ -58,9 +58,11 @@ async function db(name, mode, op) {
 const audioKey = (meta, u) => `${meta.code}/${u.n}`;
 const startOf = meta => meta.startedAt || meta.createdAt;
 
-// Saving is batched: at most one write per second per meeting.
+// Saving is batched: at most one write per second per meeting. "alive" tells when the browser that holds
+// the meeting last worked on it: a meeting that went quiet was left without being ended.
 const saveTimers = new Map();
 export function save(meta, now = false) {
+  meta.alive = Date.now();
   clearTimeout(saveTimers.get(meta.code));
   saveTimers.delete(meta.code);
   if (!now) {
@@ -83,12 +85,14 @@ export async function latest() {
 /* ---------- during the call ---------- */
 
 // A new meeting, or the one this browser was already hosting (after a reload).
-export async function open({ code, meetingName }) {
+export async function open({ code, meetingName, pin, hostName }) {
   const old = await get(code);
   if (old) return old;
   const meta = {
     code,
     meetingName,
+    pin,                     // so this browser can open the meeting again after the call (to hand out the transcript)
+    hostName,
     createdAt: Date.now(),
     startedAt: null,
     endedAt: null,
@@ -110,6 +114,7 @@ export async function open({ code, meetingName }) {
 }
 
 export function addPerson(meta, { name, email }) {
+  if (meta.status !== 'recording') return;
   meta.startedAt = meta.startedAt || Date.now();
   if (!meta.people.includes(name)) meta.people.push(name);
   if (email && !meta.recipients.some(r => r.email === email)) meta.recipients.push({ name, email });

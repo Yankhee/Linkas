@@ -42,6 +42,8 @@ import { clock, cleanText, isEmail } from './util.js';
     people: new Map(),          // host only: peer id -> { name, email, here, offset (their clock minus ours) }
     chat: [],                   // host only: chat history for people who join later
     result: null,               // guest: the finished transcript { filename, text }, sent by the host
+    left: false,                // guest: left the call early and waits for the meeting to end
+    fetching: false,            // guest: the lobby is asking the host's browser for the transcript
     local: new MediaStream(),   // microphone + camera
     screen: null,               // screen share stream, while presenting
     mic: false, cam: false, sharing: false,
@@ -174,18 +176,24 @@ import { clock, cleanText, isEmail } from './util.js';
   }
 
   /* ---------- "Last meeting" card ---------- */
-  // Guests: the transcript the host's browser sent at the end of the call (it is also emailed).
-  // Host: the meeting record kept in this browser - download it, or finish what was not finished
-  // (the tab was closed too early, Gemini failed, an email could not be sent).
+  // After a meeting, the lobby stays connected to it in the background:
+  // Guests: the card asks the host's browser for the transcript, and gets it whenever both are online
+  //         (also when they left the call early or closed the tab). It is also emailed, if set up.
+  // Host:   the card keeps the meeting open for its guests and hands out the transcript. A meeting the host
+  //         left without ending it (tab closed) is ended and transcribed here, once it has been quiet a while.
 
   const LAST_MEETING_TTL = 7 * 24 * 3600e3;
+  const IDLE_MS = 2 * 60e3;          // a meeting nobody worked on for this long was left without being ended
   let lastAction = null;
+  let lastTimer = null;
+  let finishing = false;             // the host's lobby is making the transcript right now
 
   // extra: { filename, text } or { error } once the transcript arrived (guests).
   function saveLastMeeting(extra = {}) {
     const old = readLastMeeting();
     const same = old && old.code === state.code ? old : { at: Date.now() };
-    store.set('last', JSON.stringify({ ...same, code: state.code, name: ui.meetingTitle.textContent, host: state.host, ...extra }));
+    store.set('last', JSON.stringify({ ...same, code: state.code, pin: state.pin, name: ui.meetingTitle.textContent || same.name,
+      host: state.host, ...extra }));
   }
   function readLastMeeting() {
     try {
@@ -211,9 +219,10 @@ import { clock, cleanText, isEmail } from './util.js';
   }
 
   async function renderLastMeeting() {
+    clearTimeout(lastTimer);
     const m = readLastMeeting();
     ui.lastMeeting.hidden = !m;
-    if (!m) return;
+    if (!m || state.inCall) return;
     const when = new Date(m.at);
     const day = when.toDateString() === new Date().toDateString() ? 'today' : when.toLocaleDateString();
     ui.lastWhen.textContent = `Last meeting · ${day} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
@@ -221,18 +230,20 @@ import { clock, cleanText, isEmail } from './util.js';
     setLastAction(null);
     ui.lastMeeting.classList.toggle('mail-failed', !!m.error);
     if (!m.host) {
-      if (m.text) setLastStatus('Ready to download.', 'ready');
-      else if (m.error) setLastStatus(`The transcript could not be made: ${m.error}`);
-      else setLastStatus(m.mail ? 'The host’s browser makes the transcript and emails it to you.'
-        : 'The host has no emails set up: the transcript went only to those still in the call. Ask the host for it.');
-      return;
+      if (m.text) return setLastStatus('Ready to download.', 'ready');
+      setLastStatus(m.error ? `The transcript could not be made: ${m.error}` : 'Looking for the host’s browser…', m.error ? undefined : 'busy');
+      return fetchTranscript(m);
     }
     const meta = await meeting.get(m.code);
-    if (meta) renderHostCard(meta);
-    else setLastStatus('This meeting is no longer stored in this browser.');
+    if (!meta) return setLastStatus('This meeting is no longer stored in this browser.');
+    serveMeeting(meta);
+    renderHostCard(meta);
   }
 
   function renderHostCard(meta) {
+    if (finishing) return;
+    clearTimeout(lastTimer);
+    setLastAction(null);
     const mail = Object.values(meta.mail);
     const sent = mail.filter(s => s === 'sent').length;
     const failed = mail.some(s => s.startsWith('failed'));
@@ -244,25 +255,101 @@ import { clock, cleanText, isEmail } from './util.js';
     } else if (meta.status === 'error') {
       setLastStatus(`Transcription failed: ${meta.error}`);
       setLastAction('Try again', () => runAfterMeeting(meta, true));
-    } else {   // the tab was closed during the call or while the transcript was being made
-      setLastStatus(meta.status === 'recording' ? 'Not ended yet: join it again below (same code and PIN), or make the transcript now.' : 'The transcript was not finished.');
-      setLastAction('Make it now', () => runAfterMeeting(meta, true));
+    } else {
+      // Left without "End meeting" (tab closed) or the transcript was interrupted: once nothing has happened
+      // for a while, it is finished here by itself. Until then the host can still join again.
+      const quiet = Date.now() - (meta.alive || meta.createdAt);
+      if (quiet >= IDLE_MS) return runAfterMeeting(meta, true, false);
+      setLastStatus(meta.status === 'recording'
+        ? 'Not ended yet: join it again below (same code and PIN), or it is ended and transcribed in a moment.'
+        : 'The transcript was interrupted; it continues in a moment.');
+      setLastAction(meta.status === 'recording' ? 'End it now' : 'Continue now', () => runAfterMeeting(meta, true));
+      lastTimer = setTimeout(renderLastMeeting, IDLE_MS - quiet + 1000);
     }
     if (gmail.configured && lastAction) gmail.preload();
   }
 
-  // From the card: (re)make the transcript and/or send the emails. Runs on a click, so Google can ask for Gmail.
-  async function runAfterMeeting(meta, transcribe) {
-    const mailAllowed = gmail.authorize();
-    useGeminiKey();
+  // (Re)makes the transcript and/or sends the emails. From a click, Google can also ask for Gmail;
+  // when it starts by itself (click = false), the emails wait for the "Email it" button.
+  async function runAfterMeeting(meta, transcribe, click = true) {
+    if (finishing || state.inCall) return;
+    const mailAllowed = click ? gmail.authorize() : Promise.resolve(false);
+    if (click) useGeminiKey();
+    finishing = true;
     setLastAction(null);
-    const report = text => setLastStatus(text, 'busy');
-    if (transcribe) {
-      report('Starting…');
-      await meeting.finish(meta, report);
+    const report = text => {
+      setLastStatus(text, 'busy');
+      if (state.act.progress) state.act.progress.send({ text }).catch(noop);
+    };
+    try {
+      if (transcribe) {
+        if (meta.status === 'recording' && state.act.end) {   // guests still in the call hand in their last sentence
+          report('Ending the meeting…');
+          await new Promise(r => setTimeout(r, Math.max(0, state.roomOpenedAt + 10000 - Date.now())));   // time to reconnect
+          state.act.end.send({ mail: gmail.configured }).catch(noop);
+          await guestsFlushed(FLUSH_WAIT_MS);
+        }
+        report('Starting…');
+        await meeting.finish(meta, report);
+        sendResult(meta);
+      }
+      if (meta.status === 'done' && await mailAllowed) await meeting.emailEveryone(meta, report);
+    } finally {
+      finishing = false;
     }
-    if (meta.status === 'done' && await mailAllowed) await meeting.emailEveryone(meta, report);
     renderHostCard(meta);
+  }
+
+  // Host's lobby: the meeting's room stays open, so guests can still get the transcript (or hand in speech).
+  function serveMeeting(meta) {
+    if (state.room || !meta.pin) return;
+    Object.assign(state, { code: meta.code, pin: meta.pin, name: meta.hostName || store.get('name') || 'Host', host: true, meta });
+    openRoom(meta.code, meta.pin);
+  }
+
+  // Guest's lobby: connects to the meeting and asks the host's browser for the transcript.
+  function fetchTranscript(m) {
+    if (state.room || !m.pin) return;
+    Object.assign(state, { code: m.code, pin: m.pin, name: store.get('name') || 'Guest', host: false, fetching: true });
+    openRoom(m.code, m.pin);
+    lastTimer = setTimeout(() => {
+      if (!state.result) setLastStatus(`The host’s browser is not online right now. The summary appears here as soon as it is${m.mail ? ', and it is also emailed to you' : ''}.`, 'busy');
+    }, 20000);
+  }
+
+  // In the call screen or on the lobby card, wherever this guest is waiting for the transcript.
+  function waitStatus(text, mode) {
+    if (state.inCall) setEndStatus(text, mode);
+    else setLastStatus(text, mode);
+  }
+
+  let askingTranscript = false;
+  async function askTranscript(hostId) {
+    if (askingTranscript || state.result) return;
+    askingTranscript = true;
+    try {
+      const r = await state.act.transcript.request({}, { target: hostId, timeoutMs: 20000 });
+      if (r && (r.text || r.error)) receiveResult(r);
+      else if (r) waitStatus(r.status === 'recording' ? 'The meeting is still going on. The summary appears here when it ends.' : 'The summary is being made…', 'busy');
+    } catch { /* the host went away: asked again when they are back */ }
+    askingTranscript = false;
+  }
+
+  function receiveResult(data) {
+    if (data.error) {
+      const error = cleanText(data.error, 300).replace(/[.\s]+$/, '');
+      saveLastMeeting({ error });
+      waitStatus(`The transcript could not be made: ${error}. The host can try again; it then appears here.`);
+      return;                                      // keep listening: a retry is sent again
+    }
+    state.result = { filename: cleanText(data.filename, 120) || 'Linkas.txt', text: String(data.text || '') };
+    saveLastMeeting({ ...state.result, error: null });
+    waitStatus(data.mail ? 'Ready. It is also emailed to you.' : 'Ready.', 'ready');
+    if (state.inCall) return finishEnded();
+    clearTimeout(lastTimer);
+    state.fetching = false;
+    closeRoom();
+    renderLastMeeting();
   }
 
   ui.lastDownload.addEventListener('click', async () => {
@@ -271,8 +358,11 @@ import { clock, cleanText, isEmail } from './util.js';
     if (done && done.text) saveTextFile(done.filename, done.text);
   });
   ui.lastAction.addEventListener('click', () => lastAction && lastAction());
-  ui.lastDismiss.addEventListener('click', () => { store.set('last', ''); renderLastMeeting(); });
-  renderLastMeeting();
+  ui.lastDismiss.addEventListener('click', async () => {
+    store.set('last', '');
+    if (!finishing) await closeRoom();
+    renderLastMeeting();
+  });
 
   ui.createForm.addEventListener('submit', async e => {
     e.preventDefault();
@@ -309,8 +399,12 @@ import { clock, cleanText, isEmail } from './util.js';
   let joining = null;   // a guest waiting for the host's browser to let them in: { finish, asked }
 
   async function enterRoom({ code, pin, name, email, host = false, meetingName = '' }) {
+    if (finishing) return setError('Wait until the last meeting’s transcript is ready.');
     setBusy(true);
     setError('');
+    clearTimeout(lastTimer);
+    await closeRoom();                                  // the lobby's connection to the last meeting
+    Object.assign(state, { meta: null, people: new Map(), chat: [], ended: false, left: false, result: null, fetching: false });
     // This browser created this meeting (the page was reloaded or closed): it carries on as the host.
     const own = host ? null : await meeting.get(code);
     if (own) {
@@ -322,7 +416,7 @@ import { clock, cleanText, isEmail } from './util.js';
     openRoom(code, pin);
 
     if (host) {
-      state.meta = await meeting.open({ code, meetingName });
+      state.meta = await meeting.open({ code, meetingName, pin, hostName: name });
       meeting.addPerson(state.meta, { name, email });
       meeting.addEntry(state.meta, { kind: 'join', ts: Date.now(), name });
       state.chat = state.meta.entries.filter(e => e.kind === 'chat')
@@ -485,6 +579,7 @@ import { clock, cleanText, isEmail } from './util.js';
   //   clip      one piece of the sender's speech -> host, who answers once it is stored
   //   end       host -> everyone: the meeting is over;   flushed: guest -> host: my last speech is handed in
   //   progress  host -> everyone: how far the transcript is;   result: the finished transcript
+  //   transcript  guest -> host: "is the transcript ready?" (after leaving early, or from the lobby later)
 
   const known = new Map();     // peer id -> their latest hello (also people who are not in the call yet)
   const streams = new Map();   // peer id -> their media, when it arrives before their hello
@@ -493,7 +588,7 @@ import { clock, cleanText, isEmail } from './util.js';
   function openRoom(code, pin) {
     const room = joinRoom({ appId: APP_ID, password: pin, turnConfig: TURN }, code, { onJoinError });
     const message = (name, onMessage) => room.makeAction(name, { onMessage });
-    state.room = room;
+    Object.assign(state, { room, roomOpenedAt: Date.now() });
     state.act = {
       hello: message('hello', onHello),
       chat: message('chat', onChat),
@@ -502,6 +597,7 @@ import { clock, cleanText, isEmail } from './util.js';
       progress: message('progress', onProgress),
       result: message('result', onResult),
       join: room.makeAction('join', { kind: 'request', onRequest: onJoinRequest }),
+      transcript: room.makeAction('transcript', { kind: 'request', onRequest: onTranscriptRequest }),
       clip: room.makeAction('clip', { kind: 'request', onRequest: onClip, onReceive: ({ byteLength }) => byteLength <= MAX_CLIP_BYTES }),
     };
     room.onPeerJoin = id => announce(id);
@@ -535,11 +631,18 @@ import { clock, cleanText, isEmail } from './util.js';
     // The first host stays the host while connected (nobody else in the call can take over).
     if (h.host && !state.host && (!state.hostId || state.hostId === peerId || !known.has(state.hostId))) {
       state.hostId = peerId;
-      askHost(peerId);
+      if (state.fetching || state.ended) askTranscript(peerId);   // waiting for the transcript
+      else askHost(peerId);
       flushClips();              // speech recorded while the host was away
     }
     if (state.host) hostSaw(peerId, h);
-    if (state.inCall && h.inCall) upsertPeer(peerId, h);
+    if (!state.inCall) return;
+    if (h.inCall) upsertPeer(peerId, h);
+    else if (state.peers.has(peerId)) {        // left the call (but still waits for the transcript)
+      if (!state.ended) toast(`${state.peers.get(peerId).name} left`);
+      removePeer(peerId);
+      updateCount();
+    }
   }
 
   function onPeerLeave(id) {
@@ -555,8 +658,11 @@ import { clock, cleanText, isEmail } from './util.js';
     }
     if (id !== state.hostId) return;
     state.hostId = null;
-    if (state.ended && !state.result) setEndStatus('The host left before the transcript was ready. They can finish it later; it is then emailed to you.');
-    else if (state.inCall && !state.ended) toast('The host’s connection dropped. Your speech is kept until they are back.', 6000);
+    if ((state.ended || state.fetching) && !state.result) {
+      waitStatus('The host’s browser went offline. The summary appears here as soon as it is back.', 'busy');
+    } else if (state.inCall && !state.ended) {
+      toast('The host’s connection dropped. Your speech is kept until they are back; if they do not come back, the meeting is transcribed when their Linkas opens again.', 8000);
+    }
   }
 
   /* ---------- media ---------- */
@@ -672,7 +778,8 @@ import { clock, cleanText, isEmail } from './util.js';
   // A guest asks to come in. Answered only by the host's browser.
   function onJoinRequest(data, { peerId }) {
     if (!state.host || !state.meta) throw new Error('not the host');
-    if (state.ended) return { error: 'This meeting has ended.' };
+    if (state.ended || state.meta.status !== 'recording') return { error: 'This meeting has ended.' };
+    if (!state.inCall) return { error: 'The host is not in the call right now. Try again in a moment.' };
     const email = String((data && data.email) || '').trim().toLowerCase();
     if (email.length > 120 || !isEmail(email)) return { error: 'Enter a valid email address — the summary is sent there.', badEmail: true };
     const others = [...state.people].filter(([id, p]) => p.here && id !== peerId).map(([, p]) => p.name);
@@ -704,7 +811,8 @@ import { clock, cleanText, isEmail } from './util.js';
       meeting.addPerson(state.meta, { name: h.name });
     }
     p.offset = Date.now() - h.now;
-    if (h.inCall && !p.here) {
+    if (!h.inCall) return hostLost(peerId);   // left the call early (still connected, waiting for the transcript)
+    if (!p.here) {
       p.here = true;
       meeting.addEntry(state.meta, { kind: 'join', ts: Date.now(), name: p.name });
     }
@@ -715,6 +823,14 @@ import { clock, cleanText, isEmail } from './util.js';
     if (!p || !p.here) return;
     p.here = false;
     meeting.addEntry(state.meta, { kind: 'leave', ts: Date.now(), name: p.name });
+  }
+
+  // A guest asks whether the transcript is ready (after leaving early, or later from their lobby).
+  function onTranscriptRequest() {
+    const meta = state.host && state.meta;
+    if (!meta) throw new Error('not the host');
+    if (meta.status === 'done') return { filename: meta.filename, text: meta.text, mail: gmail.configured };
+    return meta.status === 'error' ? { error: meta.error } : { status: meta.status };
   }
 
   // One piece of a guest's speech. Stored, then confirmed, so the guest can forget it.
@@ -1318,7 +1434,8 @@ import { clock, cleanText, isEmail } from './util.js';
 
   /* ================= Leaving and ending ================= */
   // The host's browser keeps the record and makes the transcript, so the meeting ends when the host leaves.
-  // Guests just leave (after handing in the sentence they were saying).
+  // A guest who leaves stays connected in the background and waits for the meeting to end, so they still get
+  // the transcript; if they close the tab, their lobby fetches it later.
 
   function setLeaveMenu(open) {
     ui.leaveMenu.hidden = !open;
@@ -1333,17 +1450,16 @@ import { clock, cleanText, isEmail } from './util.js';
   document.addEventListener('click', () => setLeaveMenu(false));
   ui.endAll.addEventListener('click', () => endMeeting());
 
-  let leaving = false;
-  async function leaveCall(reason = 'left') {
+  function leaveCall() {
     if (state.host) return endMeeting();
-    if (leaving) return;
-    leaving = true;
-    ui.leaveBtn.disabled = true;
+    if (state.ended) return;
+    Object.assign(state, { ended: true, left: true });
     setLeaveMenu(false);
-    stopMedia();                       // hands in the sentence being said right now ...
-    await clipsHandedIn(4000);         // ... and waits (max 4 s) until the host's browser has stored it
-    await closeRoom();
-    location.href = `${location.pathname}?${reason}`;
+    showEnded(readLastMeeting()?.mail);
+    setEndStatus('Waiting for the meeting to end. The summary will appear here.', 'busy');
+    stopMedia();                       // the sentence being said right now is still handed in
+    announce();                        // everyone sees that we left the call
+    if (state.hostId) askTranscript(state.hostId);
   }
 
   // Camera, microphone, screen and the recorder off; the connections stay for the transcript.
@@ -1386,12 +1502,11 @@ import { clock, cleanText, isEmail } from './util.js';
     };
     report('Transcribing…');
     const meta = await meeting.finish(state.meta, report);
+    sendResult(meta);
     if (meta.status !== 'done') {
-      if (state.act.result) state.act.result.send({ error: meta.error }).catch(noop);
       setEndStatus(`The transcript could not be made: ${meta.error.replace(/[.\s]+$/, '')}. Try again from the lobby.`);
       return finishEnded();
     }
-    if (state.act.result) state.act.result.send({ filename: meta.filename, text: meta.text, mail: gmail.configured }).catch(noop);
     if (await mailAllowed) await meeting.emailEveryone(meta, report);
 
     const mail = Object.values(meta.mail);
@@ -1404,13 +1519,20 @@ import { clock, cleanText, isEmail } from './util.js';
     finishEnded();
   }
 
-  // Host: waits until every guest says their last speech is handed in (or ms have passed).
+  // Host: the finished transcript (or why it failed) to everyone connected, also those who left early.
+  function sendResult(meta) {
+    if (!state.act.result) return;
+    state.act.result.send(meta.status === 'done' ? { filename: meta.filename, text: meta.text, mail: gmail.configured }
+      : { error: meta.error }).catch(noop);
+  }
+
+  // Host: waits until every guest still in the call says their last speech is handed in (or ms have passed).
   const flushWait = { left: null, done: null };
   function guestsFlushed(ms) {
     return new Promise(resolve => {
       const done = () => { clearTimeout(timer); Object.assign(flushWait, { left: null, done: null }); resolve(); };
       const timer = setTimeout(done, ms);
-      Object.assign(flushWait, { left: new Set(state.peers.keys()), done });
+      Object.assign(flushWait, { left: new Set([...known].filter(([, h]) => h.inCall).map(([id]) => id)), done });
       if (!flushWait.left.size) done();
     });
   }
@@ -1430,29 +1552,26 @@ import { clock, cleanText, isEmail } from './util.js';
     if (!state.result) setEndStatus('The host’s browser is making the transcript…', 'busy');
   }
   function onProgress(data, { peerId }) {
-    if (peerId === state.hostId && state.ended && !state.result) setEndStatus(cleanText(data && data.text, 120), 'busy');
+    if (peerId === state.hostId && !state.host && (state.ended || state.fetching) && !state.result) waitStatus(cleanText(data && data.text, 120), 'busy');
   }
   function onResult(data, { peerId }) {
-    if (peerId !== state.hostId || !state.ended || !data) return;
-    if (data.error) {
-      const error = cleanText(data.error, 300);
-      saveLastMeeting({ error });
-      setEndStatus(`The transcript could not be made: ${error.replace(/[.\s]+$/, '')}. The host can try again later.`);
-    } else {
-      state.result = { filename: cleanText(data.filename, 120) || 'Linkas.txt', text: String(data.text || '') };
-      saveLastMeeting(state.result);
-      setEndStatus(data.mail ? 'Ready. It is also emailed to you.' : 'Ready.', 'ready');
+    if (state.host || peerId !== state.hostId || !data || state.result) return;
+    if (state.inCall && !state.ended) {          // the host's lobby ended a meeting they had left without ending it
+      state.ended = true;
+      showEnded(data.mail);
+      stopMedia();
     }
-    finishEnded();
+    if (state.ended || state.fetching) receiveResult(data);
   }
 
-  /* ---------- the "meeting ended" screen ---------- */
+  /* ---------- the "meeting ended" / "you left" screen ---------- */
 
   function showEnded(mail = gmail.configured) {
     ui.ended.hidden = false;
+    ui.endedTitle.textContent = state.left ? 'You left the meeting' : 'The meeting has ended';
     ui.endedLobby.disabled = state.host;
     ui.endedNote.textContent = state.host ? 'Keep this tab open until it is done.'
-      : mail ? 'You can also close this tab: the summary is emailed to you.' : 'Keep this tab open to receive the summary.';
+      : `You can also close this tab: the summary then appears in your Linkas lobby${mail ? ' and is emailed to you' : ''}.`;
   }
   // mode: 'ready' (download works), 'busy' (being made) or nothing.
   function setEndStatus(text, mode) {
@@ -1470,15 +1589,17 @@ import { clock, cleanText, isEmail } from './util.js';
   });
   ui.endedLobby.addEventListener('click', async () => {
     await closeRoom();
-    location.href = `${location.pathname}?ended`;
+    location.href = `${location.pathname}?${state.left ? 'left' : 'ended'}`;
   });
 
   // Tab closed without pressing Leave: a guest still tries to hand in the sentence being said.
   // The host is warned first: the record and the transcript live in this tab.
+  const hostBusy = () => state.host && state.meta && (state.inCall || finishing) && ['recording', 'processing'].includes(state.meta.status);
   addEventListener('pagehide', () => { if (state.inCall && !state.host && !state.ended) stopRecorder(); });
-  addEventListener('beforeunload', e => {
-    if (state.host && state.meta && ['recording', 'processing'].includes(state.meta.status)) e.preventDefault();
-  });
+  addEventListener('beforeunload', e => { if (hostBusy()) e.preventDefault(); });
+  // While the host's browser works on the meeting it says so every 30 s: a meeting that goes quiet was left
+  // without being ended (tab closed), and the host's next Linkas visit ends and transcribes it.
+  setInterval(() => { if (hostBusy()) meeting.save(state.meta); }, 30e3);
 
   async function copyInvite() {
     const link = `${location.origin}${location.pathname}?room=${state.code}`;
@@ -1845,7 +1966,7 @@ import { clock, cleanText, isEmail } from './util.js';
       c.sending = true;
       state.act.clip.request(c.pcm, { target: state.hostId, metadata: { id: c.id, at: at(c) }, timeoutMs: 60000 })
         .then(() => { rec.unsent = rec.unsent.filter(x => x !== c); })
-        .catch(noop)                                          // sent again when the host is back
+        .catch(() => { clearTimeout(rec.retry); rec.retry = setTimeout(flushClips, 5000); })   // host away or not ready yet
         .finally(() => { c.sending = false; });
     }
   }
@@ -1863,4 +1984,6 @@ import { clock, cleanText, isEmail } from './util.js';
     ui.recChip.title = REC_STATUS[status];
     ui.recChip.setAttribute('aria-label', REC_STATUS[status]);
   }
+
+  renderLastMeeting();   // last: it may connect to the last meeting right away
 })();

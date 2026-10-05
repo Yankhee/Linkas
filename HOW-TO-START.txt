@@ -71,10 +71,14 @@ WHEN THE CALL IS OVER
 2. YOUR BROWSER now makes the transcript (Gemini). This takes a minute or two.
    KEEP THE TAB OPEN until it says "Ready". Everyone sees the progress on their screen.
 3. When it is done:
-   - everyone still in the call can click "Download summary"
+   - everyone can click "Download summary" - also people who left early: they wait on a
+     "You left the meeting" screen, or get it in their Linkas lobby later
    - everyone gets the email (if emails are set up), sent from your Gmail
    - your lobby shows a "Last meeting" card with "Download summary" (kept in your browser)
 4. If something failed (Gemini limit, an email), the lobby card shows "Try again" / "Send again".
+5. Forgot to press "End meeting" and closed the tab? The next time you open Linkas, it ends and
+   transcribes the meeting by itself (after 2 quiet minutes) and sends it to everyone.
+   For the emails, click "Email it" on the lobby card.
 
 
 TRYING IT ON THIS PC (optional)
@@ -102,4 +106,5 @@ IF SOMETHING GOES WRONG
 - No sound                        -> if a "Click to turn on sound" button appears, click it.
                                      Also check the tab is not muted (right-click the tab -> "Unmute site").
 - I closed the tab by accident    -> open the link again and join with the same code and PIN: you carry on
-                                     as the host, nothing is lost.
+                                     as the host, nothing is lost. If you do not, your next Linkas visit
+                                     ends and transcribes the meeting by itself.
