@@ -58,9 +58,6 @@ import { clock, cleanText, isEmail } from './util.js';
     gemini.setKey(key);
     return key;
   }
-  ui.mailNote.textContent = gmail.configured
-    ? 'After the call, everyone gets the summary by email from your Gmail.'
-    : 'Emails are off (see README): people get the summary at the end of the call.';
 
   function toast(msg, ms = 3500) {
     const t = Object.assign(document.createElement('div'), { className: 'toast', textContent: msg });

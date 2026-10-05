@@ -124,7 +124,6 @@ svg.i {
   outline: none; transition: border-color .15s, box-shadow .15s;
 }
 .input::placeholder { color: var(--muted); }
-.hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 .pin { display: flex; gap: 12px; }
