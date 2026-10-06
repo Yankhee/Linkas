@@ -87,8 +87,14 @@ VEIKSMŲ PUNKTAI
 3. **Emails (optional)**: set `GOOGLE_CLIENT_ID` in `public/config.js` (steps in `HOW-TO-START.txt`). Without
    it, everyone who is still in the call when it ends gets the transcript directly, and the host can download
    it from the lobby and forward it.
-4. **TURN (optional)**: a few strict networks (some offices, mobile carriers) block direct connections.
-   For them, put a TURN server in `public/config.js` (e.g. Cloudflare's free TURN or metered.ca).
+4. **TURN**: a few strict networks (some offices, mobile carriers) block direct connections; a TURN server
+   passes the call on for them. Metered's free TURN works straight from the browser: sign up at
+   https://www.metered.ca, open *TURN Server* in the dashboard, and put its credentials address in
+   `TURN_API` in `public/config.js`
+   (`https://YOUR-APP.metered.live/api/v1/turn/credentials?apiKey=YOUR_API_KEY`). A fixed login from any
+   other TURN provider goes in `TURN` instead. Check it: open your Linkas address with `?relay` at the end
+   in two browsers (e.g. `https://…/Linkas/?relay`), create a meeting in one and join from the other. In
+   this test mode every connection must go through TURN: if the guest gets in, TURN works.
 
 ### Try it on this PC
 
@@ -154,6 +160,7 @@ public/              the whole app (this folder is what gets published)
   gemini.js          Gemini: speech-to-text and summary
   gmail.js           sending the emails from the host's Gmail
   config.js          settings of your copy (email client ID, TURN) - public, no secrets
+  turn.js            TURN servers: the fixed ones from config.js + logins fetched from TURN_API
   util.js            small helpers (time formats, file names)
   style.css          the look
   vendor/trystero.mjs  the P2P library (finding each other + connections)

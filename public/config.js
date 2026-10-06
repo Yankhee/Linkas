@@ -13,7 +13,13 @@ export const GMAIL_SENDER = 'testlinkas@gmail.com';
 export const GOOGLE_CLIENT_ID = '326725666610-cbvt4tr397jqqfd93hr8iesmr3k35na2.apps.googleusercontent.com';
 
 // TURN servers pass the call on for people whose network blocks direct connections (some offices and mobile
-// networks). Empty = direct connections only, which works for most home and office networks.
+// networks). Without TURN only direct connections work, which is enough for most home and office networks.
 // Note: whatever is written here is public, so anyone could use this TURN login.
+
+// An address that hands out TURN logins (fetched by the browser when joining), e.g. Metered's (steps in README):
+//   'https://YOUR-APP.metered.live/api/v1/turn/credentials?apiKey=YOUR_API_KEY'
+export const TURN_API = '';
+
+// Or a fixed TURN login.
 // Example: export const TURN = [{ urls: 'turn:turn.example.com:3478', username: 'user', credential: 'pass' }];
 export const TURN = [];

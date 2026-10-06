@@ -58,6 +58,19 @@ Do these steps signed in to Google as testlinkas@gmail.com.
    From then on the window just flashes and closes. If it is blocked, allow pop-ups for your Linkas address.
 
 
+TURN: CALLS FOR PEOPLE ON STRICT NETWORKS (about 5 minutes)
+------------------------------------------------------------
+Some company and mobile networks block direct calls; a TURN server passes the call on for them.
+1. https://www.metered.ca -> sign up (free) -> dashboard -> "TURN Server".
+2. Copy the credentials address it shows (API key included), it looks like
+      https://YOUR-APP.metered.live/api/v1/turn/credentials?apiKey=...
+3. In the repository open config.js, put it between the quotes of TURN_API and commit:
+      export const TURN_API = 'https://YOUR-APP.metered.live/api/v1/turn/credentials?apiKey=...';
+4. Check it: open your Linkas address with ?relay at the end (https://yankhee.github.io/Linkas/?relay)
+   in a normal and a private window, create a meeting in one, join from the other.
+   In this test mode every connection must go through TURN: if you get in, TURN works.
+
+
 EVERY TIME YOU WANT A CALL
 --------------------------
 1. Open your Linkas address in Chrome or Edge.
@@ -104,8 +117,8 @@ IF SOMETHING GOES WRONG
 - "Could not reach the meeting"   -> check the code and PIN; the host must already be in the call.
 - "Wrong PIN"                     -> ask the host for the PIN again.
 - Client stuck on "Connecting..." -> their network blocks direct calls (rare: strict company networks).
-                                     Try another network (e.g. phone hotspot), or add a TURN server in
-                                     config.js (see README.md).
+                                     TURN (below) fixes this. Until it is set up: try another network
+                                     (e.g. phone hotspot).
 - No sound                        -> if a "Click to turn on sound" button appears, click it.
                                      Also check the tab is not muted (right-click the tab -> "Unmute site").
 - I closed the tab by accident    -> open the link again and join with the same code and PIN: you carry on

@@ -2,10 +2,11 @@
 // record (meeting.js). There is no server: browsers find each other through public relays (Trystero, with
 // the handshake encrypted by the PIN), then video, sound, chat and the recorded speech go directly between them.
 import { joinRoom, selfId } from './vendor/trystero.mjs';
-import { APP_ID, TURN } from './config.js';
+import { APP_ID } from './config.js';
 import * as gemini from './gemini.js';
 import * as gmail from './gmail.js';
 import * as meeting from './meeting.js';
+import * as turn from './turn.js';
 import { clock, cleanText, isEmail } from './util.js';
 
 (() => {
@@ -163,9 +164,12 @@ import { clock, cleanText, isEmail } from './util.js';
   ui.code.addEventListener('blur', () => { ui.code.value = normalizeCode(ui.code.value); });
 
   const params = new URLSearchParams(location.search);
+  // ?relay in the address sends everything through TURN: shows whether TURN works (no TURN = nobody connects).
+  const relayOnly = params.has('relay');
+  const relayParam = relayOnly ? '&relay' : '';
   if (params.has('left') || params.has('ended')) {
     toast(params.has('ended') ? 'The meeting has ended.' : 'You left the meeting.');
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', location.pathname + (relayOnly ? '?relay' : ''));
   }
   if (params.get('room')) {
     setTab('join');
@@ -406,6 +410,7 @@ import { clock, cleanText, isEmail } from './util.js';
     if (finishing) return setError('Wait until the last meeting’s transcript is ready.');
     setBusy(true);
     setError('');
+    await turn.load();                                  // before the lobby's room is closed: it may open it meanwhile
     clearTimeout(lastTimer);
     await closeRoom();                                  // the lobby's connection to the last meeting
     Object.assign(state, { meta: null, people: new Map(), chat: [], ended: false, left: false, result: null, fetching: false });
@@ -468,14 +473,15 @@ import { clock, cleanText, isEmail } from './util.js';
     if (/password/i.test(error)) {
       if (joining) joining.finish({ error: 'Wrong PIN.', badPin: true });
     } else if (state.inCall && /connect|turn|ice/i.test(error)) {
-      toast('Could not connect to someone: their network blocks direct calls (a TURN server is needed, see README).', 8000);
+      toast(turn.configured() ? 'Could not connect to someone, not even through the TURN server. Check the TURN settings (see README).'
+        : 'Could not connect to someone: their network blocks direct calls (a TURN server is needed, see README).', 8000);
     }
   }
 
   function startCall({ name, meetingName, chat = [], mail = false }) {
     Object.assign(state, { name: cleanText(name, 40) || state.name, joinedAt: Date.now(), inCall: true });
     meetingName = cleanText(meetingName, 60) || 'Linkas meeting';
-    history.replaceState(null, '', '?room=' + state.code);
+    history.replaceState(null, '', '?room=' + state.code + relayParam);
     document.title = `${meetingName} · Linkas`;
     ui.meetingTitle.textContent = meetingName;
     ui.roomCode.textContent = state.code;
@@ -590,7 +596,8 @@ import { clock, cleanText, isEmail } from './util.js';
   const noop = () => {};
 
   function openRoom(code, pin) {
-    const room = joinRoom({ appId: APP_ID, password: pin, turnConfig: TURN }, code, { onJoinError });
+    const room = joinRoom({ appId: APP_ID, password: pin, turnConfig: turn.servers(),
+      ...(relayOnly && { rtcConfig: { iceTransportPolicy: 'relay' } }) }, code, { onJoinError });
     const message = (name, onMessage) => room.makeAction(name, { onMessage });
     Object.assign(state, { room, roomOpenedAt: Date.now() });
     state.act = {
@@ -1593,7 +1600,7 @@ import { clock, cleanText, isEmail } from './util.js';
   });
   ui.endedLobby.addEventListener('click', async () => {
     await closeRoom();
-    location.href = `${location.pathname}?${state.left ? 'left' : 'ended'}`;
+    location.href = `${location.pathname}?${state.left ? 'left' : 'ended'}${relayParam}`;
   });
 
   // Tab closed without pressing Leave: a guest still tries to hand in the sentence being said.
@@ -1989,5 +1996,7 @@ import { clock, cleanText, isEmail } from './util.js';
     ui.recChip.setAttribute('aria-label', REC_STATUS[status]);
   }
 
-  renderLastMeeting();   // last: it may connect to the last meeting right away
+  if (relayOnly) toast(turn.configured() ? 'Test mode: every connection goes through the TURN server.'
+    : 'Test mode (?relay) needs a TURN server in config.js: without it nobody can connect.', 8000);
+  turn.load().then(renderLastMeeting);   // last: it may connect to the last meeting right away
 })();
